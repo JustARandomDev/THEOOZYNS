@@ -1,9 +1,10 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import swirlUrl from "../assets/swirl.png";
 import { sound } from "@/lib/sound";
+import { WinExperience } from "@/components/win-experience";
 
 type Symbol = { id: string; src: string };
 
@@ -28,9 +29,21 @@ export function Slots() {
   const [spins, setSpins] = useState(0);
   const [wins, setWins] = useState(0);
   const [winState, setWinState] = useState<"none" | "win" | "near-miss">("none");
+  const [showWin, setShowWin] = useState(false);
+  const [winSymbol, setWinSymbol] = useState<Symbol | null>(null);
 
   const reelsRef = useRef(reels);
   reelsRef.current = reels;
+
+  // Track whether the page is still mounted so queued reel ticks don't keep
+  // firing sounds after the user navigates away mid-spin.
+  const aliveRef = useRef(true);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
 
   const runReel = async (index: number) => {
     setActiveReel(index);
@@ -43,6 +56,10 @@ export function Slots() {
 
     return new Promise<void>((resolve) => {
       const tick = (currentTime: number) => {
+        if (!aliveRef.current) {
+          resolve();
+          return;
+        }
         const elapsed = currentTime - startTime;
 
         if (elapsed < totalDuration) {
@@ -87,6 +104,9 @@ export function Slots() {
   const handleSpin = async () => {
     if (spinning) return;
 
+    // Cancel any active win animation so a new spin resets cleanly.
+    setShowWin(false);
+
     sound.spin();
 
     setSpinning(true);
@@ -96,6 +116,8 @@ export function Slots() {
     await runReel(0);
     await runReel(1);
     await runReel(2);
+
+    if (!aliveRef.current) return;
 
     const finalReels = reelsRef.current;
 
@@ -111,10 +133,16 @@ export function Slots() {
     if (isWin) {
       setWins((w) => w + 1);
       setWinState("win");
-      setTimeout(() => sound.win(), 180);
+      setWinSymbol(finalReels[0]);
+      // Brief pause to let the reels settle visually before BSOD takes over
+      setTimeout(() => {
+        if (aliveRef.current) setShowWin(true);
+      }, 250);
     } else if (isNearMiss) {
       setWinState("near-miss");
-      setTimeout(() => sound.nearMiss(), 220);
+      setTimeout(() => {
+        if (aliveRef.current) sound.nearMiss();
+      }, 220);
     }
 
     setSpinning(false);
@@ -229,6 +257,7 @@ export function Slots() {
         <button
           onClick={handleSpin}
           disabled={spinning}
+          data-no-sound
           className={`
             relative overflow-hidden px-20 py-6 rounded-full font-display font-black tracking-[0.25em] uppercase italic text-base
             transition-all duration-300 group
@@ -253,6 +282,12 @@ export function Slots() {
           <span className="relative z-10">{spinning ? "Spinning..." : "Spin"}</span>
         </button>
       </motion.div>
+
+      <WinExperience
+        active={showWin}
+        winSymbol={winSymbol}
+        onEnd={() => setShowWin(false)}
+      />
     </div>
   );
 }

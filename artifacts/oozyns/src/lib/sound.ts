@@ -343,3 +343,74 @@ class SoundEngine {
 }
 
 export const sound = new SoundEngine();
+
+/**
+ * Install global hover + click sounds on every interactive element
+ * (button, anchor, role=button) document-wide. Idempotent — safe to call
+ * multiple times. Returns a cleanup function. Elements with the
+ * `data-no-sound` attribute are skipped (use this for buttons that already
+ * trigger their own dedicated sound, e.g. the SPIN button).
+ */
+let _uiSoundsInstalled = false;
+let _lastHoverTarget: Element | null = null;
+
+export function installGlobalUISounds(): () => void {
+  if (typeof window === "undefined") return () => {};
+  if (_uiSoundsInstalled) return () => {};
+  _uiSoundsInstalled = true;
+
+  const findInteractive = (target: EventTarget | null): Element | null => {
+    let el = target as Element | null;
+    while (el && el !== document.body) {
+      const tag = el.tagName;
+      if (tag === "BUTTON" || tag === "A") return el;
+      if (el.getAttribute && el.getAttribute("role") === "button") return el;
+      el = el.parentElement;
+    }
+    return null;
+  };
+
+  const isOptedOut = (el: Element): boolean => {
+    let cur: Element | null = el;
+    while (cur && cur !== document.body) {
+      if (cur.hasAttribute && cur.hasAttribute("data-no-sound")) return true;
+      cur = cur.parentElement;
+    }
+    return false;
+  };
+
+  const onPointerOver = (e: PointerEvent) => {
+    const el = findInteractive(e.target);
+    if (!el || el === _lastHoverTarget) return;
+    _lastHoverTarget = el;
+    if (isOptedOut(el)) return;
+    sound.hover();
+  };
+
+  const onPointerOut = (e: PointerEvent) => {
+    const el = findInteractive(e.target);
+    if (el && el === _lastHoverTarget) {
+      const next = findInteractive(e.relatedTarget as EventTarget | null);
+      if (next !== el) _lastHoverTarget = next;
+    }
+  };
+
+  const onClick = (e: MouseEvent) => {
+    const el = findInteractive(e.target);
+    if (!el) return;
+    if (isOptedOut(el)) return;
+    sound.click();
+  };
+
+  document.addEventListener("pointerover", onPointerOver);
+  document.addEventListener("pointerout", onPointerOut);
+  document.addEventListener("click", onClick);
+
+  return () => {
+    document.removeEventListener("pointerover", onPointerOver);
+    document.removeEventListener("pointerout", onPointerOut);
+    document.removeEventListener("click", onClick);
+    _uiSoundsInstalled = false;
+    _lastHoverTarget = null;
+  };
+}

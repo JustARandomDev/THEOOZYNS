@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useEffect } from "react";
 import swirlUrl from "../assets/swirl.png";
 import { SoundToggle } from "./sound-toggle";
+import { installGlobalUISounds } from "@/lib/sound";
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  useEffect(() => installGlobalUISounds(), []);
   return (
     <div className="min-h-screen w-full flex bg-background relative overflow-hidden">
       <SoundToggle />

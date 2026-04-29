@@ -7,6 +7,7 @@ export function SoundToggle() {
   return (
     <button
       onClick={toggle}
+      data-no-sound
       aria-label={muted ? "Unmute" : "Mute"}
       title={muted ? "Sound off" : "Sound on"}
       className="fixed top-4 right-4 z-50 w-10 h-10 rounded-full bg-card/80 backdrop-blur-md border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all flex items-center justify-center shadow-lg"

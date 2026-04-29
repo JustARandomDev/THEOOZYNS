@@ -138,7 +138,6 @@ export function Misanthropy() {
   }, [autoMode, glow, mono, invert, strobe, kaleido, symmetry, speed, duration]);
 
   const reseed = () => {
-    sound.click();
     if (!artRef.current) return;
     artRef.current.startTransition();
   };
@@ -151,6 +150,7 @@ export function Misanthropy() {
   const applyManualSeed = () => {
     const n = parseInt(seedInput, 10);
     if (Number.isFinite(n) && n > 0) {
+      // Play click for the keyboard-Enter path (the global handler covers the button click)
       sound.click();
       jumpToSeed(n);
       setSeedInput("");
@@ -160,7 +160,6 @@ export function Misanthropy() {
   const copySeed = async () => {
     try {
       await navigator.clipboard.writeText(String(currentSeed));
-      sound.click();
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {}
@@ -176,10 +175,7 @@ export function Misanthropy() {
     onClick: () => void;
   }) => (
     <button
-      onClick={() => {
-        sound.click();
-        onClick();
-      }}
+      onClick={onClick}
       className={`px-4 py-2 rounded-md font-display font-extrabold uppercase italic text-xs tracking-[0.2em] border transition-all ${
         active
           ? "bg-primary text-primary-foreground border-primary shadow-[0_0_20px_-5px_rgba(217,119,87,0.5)]"
