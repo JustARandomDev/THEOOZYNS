@@ -30,7 +30,7 @@ function hueRGB(h: number, bright: number): [number, number, number] {
 
 let rngState = 1;
 function seedRNG(s: number) {
-  rngState = (s * 2654435761) >>> 0;
+  rngState = Math.imul(s, 2654435761) >>> 0;
   if (rngState <= 0) rngState = 1;
 }
 function rnd() {

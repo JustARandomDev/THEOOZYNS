@@ -26,6 +26,6 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Artifacts
 
-- **OOZYNS** (`artifacts/oozyns`) — dark, warm-toned games/effects portal at `/`. Frontend-only React + Vite app using wouter for routing. Main menu (`/`) lists experience cards. Current experiences: Slot Machine (`/slots`), Drift (`/drift`) — a procedural art genome ported from a Roblox Lua module to TypeScript (`src/lib/proceduralArt.ts`), rendered to a canvas via per-pixel ImageData. Visual identity: deep warm dark backgrounds with a subtle tiled swirl pattern and coral/burnt-orange accent; bold italic Montserrat for display type, Inter for UI. Uses framer-motion for animations.
+- **OOZYNS** (`artifacts/oozyns`) — dark, warm-toned games/effects portal at `/`. Frontend-only React + Vite app using wouter for routing. Main menu (`/`) lists experience cards. Current experiences: Slot Machine (`/slots`), Misanthropy (`/misanthropy`) — a procedural art genome ported from a Roblox Lua module to TypeScript (`src/lib/proceduralArt.ts`), rendered to a canvas via per-pixel ImageData. Misanthropy defaults to 100×100 pixelated and exposes resolution, frame rate, speed, scene duration, all genome effects, symmetry, kaleidoscope, and seed display/jump/copy controls. Visual identity: deep warm dark backgrounds with a subtle tiled swirl pattern and coral/burnt-orange accent; bold italic Montserrat for display type, Inter for UI. Uses framer-motion for animations.
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
