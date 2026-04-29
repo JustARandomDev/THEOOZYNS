@@ -143,7 +143,7 @@ export function Home() {
                   Misanthropy
                 </h3>
                 <p className="font-display font-extrabold uppercase italic text-sm md:text-base text-primary/80 mt-1 tracking-[0.15em]">
-                  ROBLOX EFFECT, REWIRED
+                  auralicious effect ported to here from luau
                 </p>
               </div>
             </div>
