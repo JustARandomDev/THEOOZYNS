@@ -1,9 +1,11 @@
 import React from "react";
 import swirlUrl from "../assets/swirl.png";
+import { SoundToggle } from "./sound-toggle";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen w-full flex bg-background relative overflow-hidden">
+      <SoundToggle />
       {/* Subtle swirl pattern, tiled, very low opacity to fit the dark warm style */}
       <div
         className="fixed inset-0 z-0 pointer-events-none opacity-[0.06]"

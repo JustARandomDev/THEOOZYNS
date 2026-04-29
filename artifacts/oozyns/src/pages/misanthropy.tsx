@@ -3,6 +3,8 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, Shuffle, Copy, Check } from "lucide-react";
 import { ProceduralArt } from "@/lib/proceduralArt";
+import { sound } from "@/lib/sound";
+import musicUrl from "@assets/Keaukaha_1777496202294.mp3";
 
 type SymMode = "none" | "x" | "y" | "both";
 
@@ -36,6 +38,32 @@ export function Misanthropy() {
   const [currentSeed, setCurrentSeed] = useState<number>(randomSeed());
   const [seedInput, setSeedInput] = useState<string>("");
   const [copied, setCopied] = useState(false);
+
+  // Load + auto-start the background music (with autoplay-policy fallback)
+  useEffect(() => {
+    sound.setMusic(musicUrl, 0.32);
+    let armed = true;
+    void sound.startMusic(2000);
+
+    const tryStart = () => {
+      if (!armed) return;
+      void sound.startMusic(1500);
+      if (sound.isMusicPlaying()) {
+        armed = false;
+        window.removeEventListener("pointerdown", tryStart);
+        window.removeEventListener("keydown", tryStart);
+      }
+    };
+    window.addEventListener("pointerdown", tryStart);
+    window.addEventListener("keydown", tryStart);
+
+    return () => {
+      armed = false;
+      window.removeEventListener("pointerdown", tryStart);
+      window.removeEventListener("keydown", tryStart);
+      sound.stopMusic(600);
+    };
+  }, []);
 
   // (Re)build the art instance whenever resolution or seed changes
   useEffect(() => {
@@ -110,6 +138,7 @@ export function Misanthropy() {
   }, [autoMode, glow, mono, invert, strobe, kaleido, symmetry, speed, duration]);
 
   const reseed = () => {
+    sound.click();
     if (!artRef.current) return;
     artRef.current.startTransition();
   };
@@ -122,6 +151,7 @@ export function Misanthropy() {
   const applyManualSeed = () => {
     const n = parseInt(seedInput, 10);
     if (Number.isFinite(n) && n > 0) {
+      sound.click();
       jumpToSeed(n);
       setSeedInput("");
     }
@@ -130,6 +160,7 @@ export function Misanthropy() {
   const copySeed = async () => {
     try {
       await navigator.clipboard.writeText(String(currentSeed));
+      sound.click();
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {}
@@ -145,7 +176,10 @@ export function Misanthropy() {
     onClick: () => void;
   }) => (
     <button
-      onClick={onClick}
+      onClick={() => {
+        sound.click();
+        onClick();
+      }}
       className={`px-4 py-2 rounded-md font-display font-extrabold uppercase italic text-xs tracking-[0.2em] border transition-all ${
         active
           ? "bg-primary text-primary-foreground border-primary shadow-[0_0_20px_-5px_rgba(217,119,87,0.5)]"

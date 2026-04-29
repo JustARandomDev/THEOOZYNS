@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import swirlUrl from "../assets/swirl.png";
+import { sound } from "@/lib/sound";
 
 type Symbol = { id: string; src: string };
 
@@ -61,6 +62,8 @@ export function Slots() {
 
           lastRandomIndex = randomIndex;
 
+          sound.tick();
+
           setReels((prev) => {
             const next = [...prev];
             next[index] = SYMBOLS[randomIndex];
@@ -73,6 +76,7 @@ export function Slots() {
         } else {
           setActiveReel(null);
           setLockedReels((prev) => [...prev, index]);
+          sound.reelStop();
           resolve();
         }
       };
@@ -82,6 +86,8 @@ export function Slots() {
 
   const handleSpin = async () => {
     if (spinning) return;
+
+    sound.spin();
 
     setSpinning(true);
     setLockedReels([]);
@@ -105,8 +111,10 @@ export function Slots() {
     if (isWin) {
       setWins((w) => w + 1);
       setWinState("win");
+      setTimeout(() => sound.win(), 180);
     } else if (isNearMiss) {
       setWinState("near-miss");
+      setTimeout(() => sound.nearMiss(), 220);
     }
 
     setSpinning(false);
