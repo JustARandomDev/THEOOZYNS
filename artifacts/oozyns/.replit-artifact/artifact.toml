@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "OOZYNS"
+version = "1.0.0"
+id = "artifacts/oozyns"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24824
+
+[services.development]
+run = "pnpm --filter @workspace/oozyns run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/oozyns", "run", "build" ]
+publicDir = "artifacts/oozyns/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24824"
+BASE_PATH = "/"

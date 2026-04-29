@@ -24,4 +24,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
+## Artifacts
+
+- **OOZYNS** (`artifacts/oozyns`) — dark, warm-toned games portal at `/`. Frontend-only React + Vite app using wouter for routing. Main menu (`/`) lists game cards in a grid; first game is the Slot Machine (`/slots`). Visual identity inspired by Claude UI: deep warm dark backgrounds, coral/burnt-orange accent, editorial serif wordmark. Uses framer-motion for animations and lucide-react for slot symbols.
+
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

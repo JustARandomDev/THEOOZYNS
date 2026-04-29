@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Tension Slot Machine</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #0a0a0a;
+            font-family: 'Arial Black', sans-serif;
+            color: white;
+        }
+
+        .spinner-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 50px;
+        }
+
+        .slot {
+            width: 200px;
+            height: 200px;
+            border: 5px solid #333;
+            border-radius: 15px;
+            overflow: hidden;
+            background-color: #111;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .slot.active {
+            border-color: #00d4ff;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
+        }
+
+        .slot.locked {
+            border-color: #00ff88;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.6);
+        }
+
+        .slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        button {
+            padding: 20px 80px;
+            font-size: 2rem;
+            font-weight: 900;
+            color: #000;
+            background: linear-gradient(to bottom, #00ff88, #00b35f);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            box-shadow: 0 8px 0 #006636, 0 15px 25px rgba(0, 255, 136, 0.3);
+            transition: all 0.1s;
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #006636;
+        }
+
+        button:disabled {
+            background: #444;
+            box-shadow: 0 8px 0 #222;
+            color: #777;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="spinner-container">
+        <div class="slot"><img id="slot1" src="https://i.imgur.com/At5EvhS.png"></div>
+        <div class="slot"><img id="slot2" src="https://i.imgur.com/KuGij8t.png"></div>
+        <div class="slot"><img id="slot3" src="https://i.imgur.com/BLgerSI.png"></div>
+    </div>
+
+    <button id="spinBtn">SPIN</button>
+
+    <audio id="tickSound" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+    
+    <audio id="slotSound" src="https://cdn.jumpshare.com/file/greX0vBNRcAO8L7qfFRT/mixkit-slot-machine-payout-alarm-1996+(1).wav" preload="auto"></audio>
+
+    <script>
+        const imagePool = [
+            "https://i.imgur.com/At5EvhS.png",
+            "https://i.imgur.com/KuGij8t.png",
+            "https://i.imgur.com/BLgerSI.png",
+            "https://i.imgur.com/FhlxwGz.png",
+            "https://i.imgur.com/Fz1ylKq.png"
+        ];
+
+        const btn = document.getElementById('spinBtn');
+        const tickSound = document.getElementById('tickSound');
+        const slotSound = document.getElementById('slotSound');
+        const slotImages = [
+            document.getElementById('slot1'),
+            document.getElementById('slot2'),
+            document.getElementById('slot3')
+        ];
+        const slotDivs = document.querySelectorAll('.slot');
+
+        function easeOutCubic(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
+
+        function playTick() {
+            tickSound.pause();
+            tickSound.currentTime = 0;
+            tickSound.play().catch(() => {});
+        }
+
+        async function runSlot(index) {
+            const imgElement = slotImages[index];
+            const parentDiv = slotDivs[index];
+            let lastRandomIndex = -1;
+            
+            parentDiv.classList.remove('locked');
+            parentDiv.classList.add('active');
+
+            const startTime = performance.now();
+            const fastDuration = 2000;
+            const slowDuration = 4000;
+            const totalDuration = fastDuration + slowDuration;
+
+            return new Promise(resolve => {
+                function tick(currentTime) {
+                    const elapsed = currentTime - startTime;
+
+                    if (elapsed < totalDuration) {
+                        let currentDelay;
+
+                        if (elapsed < fastDuration) {
+                            currentDelay = 60;
+                        } else {
+                            const slowProgress = (elapsed - fastDuration) / slowDuration;
+                            currentDelay = 60 + (easeOutCubic(slowProgress) * 640);
+                        }
+
+                        let randomIndex;
+                        do {
+                            randomIndex = Math.floor(Math.random() * imagePool.length);
+                        } while (randomIndex === lastRandomIndex);
+                        
+                        lastRandomIndex = randomIndex;
+                        imgElement.src = imagePool[randomIndex];
+                        
+                        playTick();
+
+                        setTimeout(() => {
+                            requestAnimationFrame(tick);
+                        }, currentDelay);
+                    } else {
+                        parentDiv.classList.remove('active');
+                        parentDiv.classList.add('locked');
+                        resolve();
+                    }
+                }
+                requestAnimationFrame(tick);
+            });
+        }
+
+        btn.addEventListener('click', async () => {
+            // Force browser to unlock audio
+            [tickSound, slotSound].forEach(s => {
+                s.play().then(() => {
+                    s.pause();
+                    s.currentTime = 0;
+                }).catch(() => {});
+            });
+
+            // Start the payout alarm
+            slotSound.play().catch(() => {});
+
+            btn.disabled = true;
+
+            await runSlot(0);
+            await runSlot(1);
+            await runSlot(2);
+
+            btn.disabled = false;
+        });
+    </script>
+</body>
+</html>
