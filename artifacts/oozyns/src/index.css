@@ -52,6 +52,7 @@
 
   --font-sans: var(--app-font-sans);
   --font-serif: var(--app-font-serif);
+  --font-display: var(--app-font-display);
   --font-mono: var(--app-font-mono);
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -104,7 +105,8 @@
   --chart-5: 75 60% 50%;
 
   --app-font-sans: 'Inter', sans-serif;
-  --app-font-serif: 'Fraunces', serif;
+  --app-font-serif: 'Montserrat', 'Inter', sans-serif;
+  --app-font-display: 'Montserrat', 'Inter', sans-serif;
   --app-font-mono: Menlo, monospace;
   --radius: .5rem; 
   --shadow-2xs: 0px 2px 0px 0px hsl(30 6% 8% / 0.1);
