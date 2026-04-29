@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import { Layout } from "@/components/layout";
 import { Home } from "@/pages/home";
 import { Slots } from "@/pages/slots";
+import { Drift } from "@/pages/drift";
 
 const queryClient = new QueryClient();
 
@@ -15,6 +16,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/slots" component={Slots} />
+      <Route path="/drift" component={Drift} />
       <Route component={NotFound} />
     </Switch>
   );

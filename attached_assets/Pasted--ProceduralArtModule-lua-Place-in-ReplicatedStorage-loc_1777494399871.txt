@@ -1,0 +1,278 @@
+-- ProceduralArtModule.lua
+-- Place in ReplicatedStorage
+
+local AssetService = game:GetService("AssetService")
+local RunService = game:GetService("RunService")
+
+local ProceduralArt = {}
+
+local sin, cos, floor, pi, sqrt, abs = math.sin, math.cos, math.floor, math.pi, math.sqrt, math.abs
+local max, min, atan2, fmod = math.max, math.min, math.atan2 or math.atan, math.fmod
+
+local USE_FAST_MATH = true
+local COLOR_CACHE_SIZE = 4096
+local HUE = table.create(1024)
+for i = 0, 1023 do
+	local h = i / 1024
+	local s = floor(h * 6)
+	local f = h * 6 - s
+	local q = 1 - f
+	local r, g, b
+	if s == 0 then r, g, b = 255, f * 255, 0
+	elseif s == 1 then r, g, b = q * 255, 255, 0
+	elseif s == 2 then r, g, b = 0, 255, f * 255
+	elseif s == 3 then r, g, b = 0, q * 255, 255
+	elseif s == 4 then r, g, b = f * 255, 0, 255
+	else r, g, b = 255, 0, q * 255 end
+	HUE[i + 1] = floor(r) * 65536 + floor(g) * 256 + floor(b)
+end
+
+local function hue(h, bright)
+	bright = bright < 0 and 0 or (bright > 1 and 1 or bright)
+	local v = HUE[floor((h % 1) * 1024) % 1024 + 1]
+	return floor(floor(v / 65536) * bright), floor(floor(v / 256) % 256 * bright), floor(v % 256 * bright)
+end
+
+local rngState = 1
+local function seedRNG(s)
+	rngState = (s * 2654435761) % 4294967296
+	if rngState <= 0 then rngState = 1 end
+end
+local function rnd()
+	rngState = (rngState * 1664525 + 1013904223) % 4294967296
+	return rngState / 4294967296
+end
+local function rF(lo, hi) return lo + rnd() * (hi - lo) end
+local function rI(lo, hi) return floor(rnd() * (hi - lo + 1)) + lo end
+
+local GENES = {
+	function(x,y,t,p) return sin(x*p[1]+t*p[3]) end,
+	function(x,y,t,p) return cos(y*p[2]+t*p[3]) end,
+	function(x,y,t,p) return sin(x*p[1]+y*p[2]+t*p[3]) end,
+	function(x,y,t,p) return cos(x*p[2]-y*p[1]+t*p[3]) end,
+	function(x,y,t,p) return sin(sqrt(x*x+y*y+0.001)*p[1]-t*p[3]) end,
+	function(x,y,t,p) return cos(sqrt(x*x+y*y+0.001)*p[2]+t*p[3]) end,
+	function(x,y,t,p) return sin(x*p[1])*cos(y*p[2]+t*p[3]) end,
+	function(x,y,t,p) return sin((x+y)*p[1]+t*p[3])*sin((x-y)*p[2]-t*p[3]) end,
+	function(x,y,t,p) return sin(x*x*p[1]+y*y*p[2]+t*p[3]) end,
+	function(x,y,t,p) return sin((x*x-y*y)*p[1]+t*p[3]) end,
+	function(x,y,t,p) return sin(sqrt(x*x+y*y+0.001)*p[1]+atan2(y+0.001,x+0.001)*p[2]+t*p[3]) end,
+	function(x,y,t,p) return cos((x+y)*p[1]+sin(t*p[3])*p[2]) end,
+}
+
+local COMBINATORS = {
+	function(a,b) return (a+b)*0.5 end,
+	function(a,b) return a*b end,
+	function(a,b) return abs(a-b) end,
+	function(a,b) return sin(a+b) end,
+	function(a,b) return (a+b+a*b)*0.33 end,
+	function(a,b) return max(a,b) end,
+	function(a,b) return min(a,b) end,
+	function(a,b) return sin(a*b*pi) end,
+}
+
+local COLOR_FNS = {
+	function(v,v2,t) return (v*0.5+0.5+t*0.07)%1, 0.5+v2*0.4 end,
+	function(v,v2,t) return (abs(v)+t*0.05)%1, 0.4+abs(v2)*0.5 end,
+	function(v,v2,t) return (v*v2*0.5+0.5+t*0.09)%1, max(0.2,abs(v)*0.8) end,
+	function(v,v2,t) return (sin(v*pi+t)*0.5+0.5)%1, 0.5+abs(v2)*0.3 end,
+	function(v,v2,t) return ((v+v2)*0.3+t*0.06)%1, 0.4+abs(v*v2)*0.5 end,
+}
+
+local function makeParams()
+	local p = table.create(8)
+	for i = 1, 8 do p[i] = rF(1, 7) * (rnd() > 0.5 and 1 or -1) end
+	p[3] = rF(0.3, 2)
+	return p
+end
+
+function ProceduralArt.buildGenome(seed)
+	seedRNG(seed)
+	local G = {
+		seed = seed,
+		numGenes = rI(3, 5),
+		genes = table.create(5),
+		params = table.create(5),
+		combinators = table.create(4),
+		colorFn = COLOR_FNS[rI(1, #COLOR_FNS)],
+		spaceScale = rF(0.8, 3.3),
+		timeScale = rF(0.12, 1.1),
+		ox = rF(0.05, 0.35),
+		oy = rF(0.05, 0.35),
+		colorGeneIdx = rI(1, #GENES),
+		colorParams = makeParams(),
+	}
+	for i = 1, G.numGenes do
+		G.genes[i] = GENES[rI(1, #GENES)]
+		G.params[i] = makeParams()
+	end
+	for i = 1, G.numGenes - 1 do
+		G.combinators[i] = COMBINATORS[rI(1, #COMBINATORS)]
+	end
+	G.colorParams[3] = rF(0.1, 1)
+	return G
+end
+
+function ProceduralArt.evalGenome(G, x, y, t)
+	local sx = (x + G.ox) * G.spaceScale
+	local sy = (y + G.oy) * G.spaceScale
+	local lt = t * G.timeScale
+	local v = G.genes[1](sx, sy, lt, G.params[1])
+	for i = 2, G.numGenes do
+		v = G.combinators[i - 1](v, G.genes[i](sx, sy, lt, G.params[i]))
+	end
+	if v > 2 then v = 2 elseif v < -2 then v = -2 end
+	local v2 = GENES[G.colorGeneIdx](sx * 1.2, sy * 1.2, lt * G.colorParams[3], G.colorParams)
+	if v2 > 2 then v2 = 2 elseif v2 < -2 then v2 = -2 end
+	local h, bright = G.colorFn(v, v2, t * 0.05)
+	return hue(h, bright)
+end
+
+function ProceduralArt.new(config)
+	config = config or {}
+	local w = config.width or 100
+	local h = config.height or 100
+	local self = {
+		width = w,
+		height = h,
+		seed = config.seed or math.random(100000, 9999999),
+		autoMode = config.autoMode or false,
+		duration = config.duration or 6,
+		blendTime = config.blendTime or 0.6,
+		updateRate = config.updateRate or 1/15,
+		speedMult = config.speedMult or 1,
+		glowEnabled = config.glowEnabled or false,
+		monoEnabled = config.monoEnabled or false,
+		invertColors = config.invertColors or false,
+		strobeEnabled = config.strobeEnabled or false,
+		symmetryMode = config.symmetryMode or 'none',
+		kaleidoEnabled = config.kaleidoEnabled or false,
+		sceneTime = 0,
+		t = 0,
+		transitioning = false,
+		currentSeed = nil,
+		nextSeed = nil,
+		currentG = nil,
+		nextG = nil,
+		lastUpdate = 0,
+		_x = table.create(w * h),
+		_y = table.create(w * h),
+	}
+	self.currentSeed = self.seed
+	self.currentG = ProceduralArt.buildGenome(self.currentSeed)
+	self.nextSeed = math.random(100000, 9999999)
+	self.nextG = ProceduralArt.buildGenome(self.nextSeed)
+	local halfW, halfH = w * 0.5, h * 0.5
+	local i = 1
+	for py = 0, h - 1 do
+		local yv = (py - halfH) / halfH
+		for px = 0, w - 1 do
+			self._x[i] = (px - halfW) / halfW
+			self._y[i] = yv
+			i += 1
+		end
+	end
+
+	function self:startTransition(newSeed)
+		if self.transitioning then return end
+		self.nextSeed = newSeed or math.random(100000, 9999999)
+		self.nextG = ProceduralArt.buildGenome(self.nextSeed)
+		self.sceneTime = self.duration
+		self.transitioning = true
+	end
+
+	function self:render(pixBuffer, dt)
+		dt = dt or 0.016
+		local ed = dt * self.speedMult
+		self.t += ed
+		self.sceneTime += ed
+		self.lastUpdate += ed
+		if self.lastUpdate < self.updateRate then return self.currentSeed end
+		self.lastUpdate = 0
+		local blend = 0
+		if self.sceneTime >= self.duration then
+			if not self.transitioning and self.autoMode then
+				self.nextSeed = math.random(100000, 9999999)
+				self.nextG = ProceduralArt.buildGenome(self.nextSeed)
+				self.transitioning = true
+			end
+			blend = min(1, (self.sceneTime - self.duration) / self.blendTime)
+			if blend >= 1 then
+				self.currentG = self.nextG
+				self.currentSeed = self.nextSeed
+				self.sceneTime = 0
+				self.transitioning = false
+				blend = 0
+			end
+		end
+		local strobeActive = self.strobeEnabled and (floor(self.t * 8) % 2 == 0)
+		local currentG, nextG, xArr, yArr, tNow = self.currentG, self.nextG, self._x, self._y, self.t
+		local idx = 0
+		for i = 1, w * h do
+			local x = xArr[i]
+			local y = yArr[i]
+			local evalX, evalY = x, y
+			if self.symmetryMode == 'x' or self.symmetryMode == 'both' then evalX = abs(x) end
+			if self.symmetryMode == 'y' or self.symmetryMode == 'both' then evalY = abs(y) end
+			if self.kaleidoEnabled then
+				local angle = atan2(evalY, evalX)
+				local r = sqrt(evalX * evalX + evalY * evalY)
+				local slice = pi / 3
+				angle = angle % slice
+				if angle > slice * 0.5 then angle = slice - angle end
+				evalX = cos(angle) * r
+				evalY = sin(angle) * r
+			end
+			local r, g, b = ProceduralArt.evalGenome(currentG, evalX, evalY, tNow)
+			if blend > 0 then
+				local r2, g2, b2 = ProceduralArt.evalGenome(nextG, evalX, evalY, tNow)
+				r = floor(r * (1 - blend) + r2 * blend)
+				g = floor(g * (1 - blend) + g2 * blend)
+				b = floor(b * (1 - blend) + b2 * blend)
+			end
+			if self.glowEnabled then
+				local brightness = (r + g + b) / 3
+				local boost = 1 + (brightness / 255) * 0.25
+				r = min(255, floor(r * boost))
+				g = min(255, floor(g * boost))
+				b = min(255, floor(b * boost))
+			end
+			if self.monoEnabled then
+				local gray = floor((r + g + b) / 3)
+				r, g, b = gray, gray, gray
+			end
+			if self.invertColors then
+				r = 255 - r; g = 255 - g; b = 255 - b
+			end
+			if strobeActive then
+				r = floor(r * 0.3); g = floor(g * 0.3); b = floor(b * 0.3)
+			end
+			buffer.writeu8(pixBuffer, idx, r)
+			buffer.writeu8(pixBuffer, idx + 1, g)
+			buffer.writeu8(pixBuffer, idx + 2, b)
+			buffer.writeu8(pixBuffer, idx + 3, 255)
+			idx += 4
+		end
+		return self.currentSeed
+	end
+
+	return self
+end
+
+function ProceduralArt.newDisplay(parentGui, width, height)
+	local gui = Instance.new('ImageLabel')
+	gui.Name = 'ProceduralArtDisplay'
+	gui.BackgroundTransparency = 1
+	gui.Size = UDim2.fromScale(1, 1)
+	gui.Position = UDim2.fromScale(0, 0)
+	gui.BorderSizePixel = 0
+	gui.ScaleType = Enum.ScaleType.Stretch
+	gui.Parent = parentGui
+
+	local img = AssetService:CreateEditableImage({ Size = Vector2.new(width, height) })
+	gui.ImageContent = img
+	return gui, img
+end
+
+return ProceduralArt
+
