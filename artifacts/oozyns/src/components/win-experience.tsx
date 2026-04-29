@@ -6,7 +6,7 @@ import { useMuted } from "@/hooks/useMuted";
 
 type Phase = "bsod" | "rave" | "fading";
 
-const DROP_DELAY_MS = 2500;
+const DROP_DELAY_MS = 14500;
 const FADE_OUT_MS = 1800;
 const MIN_RAVE_MS = 6000;
 const TARGET_VOL = 0.6;

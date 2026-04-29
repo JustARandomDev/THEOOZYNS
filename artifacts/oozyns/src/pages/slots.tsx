@@ -9,7 +9,7 @@ import { WinExperience } from "@/components/win-experience";
 // DEBUG: when true, every spin is forced to a win so you can test the
 // jackpot animation without waiting for the 1-in-25 odds. Flip to false
 // before shipping.
-const DEBUG_ALWAYS_WIN = true;
+const DEBUG_ALWAYS_WIN = false;
 
 type Symbol = { id: string; src: string };
 
