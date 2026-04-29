@@ -6,6 +6,11 @@ import swirlUrl from "../assets/swirl.png";
 import { sound } from "@/lib/sound";
 import { WinExperience } from "@/components/win-experience";
 
+// DEBUG: when true, every spin is forced to a win so you can test the
+// jackpot animation without waiting for the 1-in-25 odds. Flip to false
+// before shipping.
+const DEBUG_ALWAYS_WIN = true;
+
 type Symbol = { id: string; src: string };
 
 const SYMBOLS: Symbol[] = [
@@ -118,6 +123,12 @@ export function Slots() {
     await runReel(2);
 
     if (!aliveRef.current) return;
+
+    if (DEBUG_ALWAYS_WIN) {
+      const winning = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+      setReels([winning, winning, winning]);
+      reelsRef.current = [winning, winning, winning];
+    }
 
     const finalReels = reelsRef.current;
 
